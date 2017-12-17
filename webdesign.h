@@ -8,6 +8,7 @@ extern const char sHtmlCommonHeader[];
 
 extern const char sHtmlHashrateBodyHigh[];
 extern const char sHtmlHashrateTableRow[];
+extern const char sHtmlPartialHashrateTableRow[];
 extern const char sHtmlHashrateBodyLow[];
 
 extern const char sHtmlConnectionBodyHigh[];

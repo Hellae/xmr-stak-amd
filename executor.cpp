@@ -699,7 +699,7 @@ void executor::print_report(ex_event_name ev)
 
 void executor::http_hashrate_report(std::string& out)
 {
-	char num_a[32], num_b[32], num_c[32], num_d[32];
+	char num_a[32], num_b[32], num_c[32], num_pa[32], num_pb[32], num_pc[32], num_d[32];
 	char buffer[4096];
 	size_t nthd = pvThreads->size();
 
@@ -708,19 +708,27 @@ void executor::http_hashrate_report(std::string& out)
 	snprintf(buffer, sizeof(buffer), sHtmlCommonHeader, "Hashrate Report", "Hashrate Report");
 	out.append(buffer);
 
-	snprintf(buffer, sizeof(buffer), sHtmlHashrateBodyHigh, (unsigned int)nthd + 3);
+	snprintf(buffer, sizeof(buffer), sHtmlHashrateBodyHigh);
 	out.append(buffer);
 
-	double fTotal[3] = { 0.0, 0.0, 0.0};
-	for(size_t i=0; i < nthd; i++)
+	double fTotal[3] = { 0.0, 0.0, 0.0 };
+	double fPartial[3] = { 0.0, 0.0, 0.0 };
+
+	jconf::thd_cfg cfg; //get miner config
+	int devId = -1; //previous device id holder
+	bool partial = false; //mutex to show or not a partial
+
+	for (size_t i = 0; i < nthd; i++)
 	{
+		jconf::inst()->GetThreadConfig(i, cfg);
+
 		double fHps[3];
 
 		fHps[0] = telem->calc_telemetry_data(10000, i);
 		fHps[1] = telem->calc_telemetry_data(60000, i);
 		fHps[2] = telem->calc_telemetry_data(900000, i);
 
-		num_a[0] = num_b[0] = num_c[0] ='\0';
+		num_a[0] = num_b[0] = num_c[0] = '\0';
 		hps_format(fHps[0], num_a, sizeof(num_a));
 		hps_format(fHps[1], num_b, sizeof(num_b));
 		hps_format(fHps[2], num_c, sizeof(num_c));
@@ -729,11 +737,64 @@ void executor::http_hashrate_report(std::string& out)
 		fTotal[1] += fHps[1];
 		fTotal[2] += fHps[2];
 
-		snprintf(buffer, sizeof(buffer), sHtmlHashrateTableRow, (unsigned int)i, num_a, num_b, num_c);
+		//compare previous with current device id
+		if (devId >= 0 && (size_t)devId == cfg.index)
+		{
+			//multiple threads for samw device found. set partial mutex to true
+			partial = true;
+
+			//sum data
+			fPartial[0] += fHps[0];
+			fPartial[1] += fHps[1];
+			fPartial[2] += fHps[2];
+
+			//display same device, new thread
+			snprintf(buffer, sizeof(buffer), sHtmlHashrateTableRow, (unsigned int)cfg.index, (unsigned int)i, num_a, num_b, num_c);
+		}
+		else {
+			//before jumping to a newer device, check if there's a partial to be printed.
+			if (partial) {
+				num_pa[0] = num_pb[0] = num_pc[0] = '\0';
+				hps_format(fPartial[0], num_pa, sizeof(num_pa));
+				hps_format(fPartial[1], num_pb, sizeof(num_pb));
+				hps_format(fPartial[2], num_pc, sizeof(num_pc));
+
+				//display old device partial
+				snprintf(buffer, sizeof(buffer), sHtmlPartialHashrateTableRow, (unsigned int)devId, num_pa, num_pb, num_pc);
+				out.append(buffer);
+				partial = false;
+			}
+
+			//reset and save new data
+			fPartial[0] = fHps[0];
+			fPartial[1] = fHps[1];
+			fPartial[2] = fHps[2];
+
+			//display new device, first thread
+			snprintf(buffer, sizeof(buffer), sHtmlHashrateTableRow, (unsigned int)cfg.index, (unsigned int)i, num_a, num_b, num_c);
+		}
+
+		//save current device Id
+		devId = cfg.index;
+
 		out.append(buffer);
 	}
 
-	num_a[0] = num_b[0] = num_c[0] = num_d[0] ='\0';
+	//before closing the table, check if there's a partial to be printed.
+	if (partial) {
+		num_pa[0] = num_pb[0] = num_pc[0] = '\0';
+		hps_format(fPartial[0], num_pa, sizeof(num_pa));
+		hps_format(fPartial[1], num_pb, sizeof(num_pb));
+		hps_format(fPartial[2], num_pc, sizeof(num_pc));
+
+		//display old device partial
+		snprintf(buffer, sizeof(buffer), sHtmlPartialHashrateTableRow, (unsigned int)devId, num_pa, num_pb, num_pc);
+		out.append(buffer);
+		partial = false;
+	}
+
+
+	num_a[0] = num_b[0] = num_c[0] = num_d[0] = '\0';
 	hps_format(fTotal[0], num_a, sizeof(num_a));
 	hps_format(fTotal[1], num_b, sizeof(num_b));
 	hps_format(fTotal[2], num_c, sizeof(num_c));

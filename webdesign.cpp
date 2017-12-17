@@ -115,14 +115,17 @@ extern const char sHtmlCommonHeader [] =
 extern const char sHtmlHashrateBodyHigh [] =
 	"<div class=data>"
 	"<table>"
-		"<tr><th>Thread ID</th><th>10s</th><th>60s</th><th>15m</th><th rowspan='%u'>H/s</td></tr>";
+		"<tr><th>Device ID</th><th>Thread ID</th><th>10s (H/s)</th><th>60s (H/s)</th><th>15m (H/s)</th></tr>";
 
 extern const char sHtmlHashrateTableRow [] =
-	"<tr><th>%u</th><td>%s</td><td>%s</td><td>%s</td></tr>";
+	"<tr><th>%u</th><th>%u</th><td>%s</td><td>%s</td><td>%s</td></tr>";
+
+extern const char sHtmlPartialHashrateTableRow[] =
+	"<tr><th colspan='2'>Device %u Total:</th><th>%s</th><th>%s</th><th>%s</th></tr>";
 
 extern const char sHtmlHashrateBodyLow [] =
-		"<tr><th>Totals:</th><td>%s</td><td>%s</td><td>%s</td></tr>"
-		"<tr><th>Highest:</th><td>%s</td><td colspan='2'></td></tr>"
+		"<tr><th colspan='2'>Totals:</th><td>%s</td><td>%s</td><td>%s</td></tr>"
+		"<tr><th colspan='2'>Highest:</th><td>%s</td><td colspan='2'></td></tr>"
 	"</table>"
 	"</div></div></body></html>";
 
